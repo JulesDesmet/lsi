@@ -5,7 +5,7 @@ from typing import Generator
 from sys import argv
 
 
-def read_csv(filename: str) -> Generator[list[str], None, None]:
+def read_csv(filename: str) -> Generator[dict[str, str], None, None]:
     """
     Reads a CSV file line by line. This method should be used as follows:
     ```
@@ -15,10 +15,13 @@ def read_csv(filename: str) -> Generator[list[str], None, None]:
 
     :param filename: The CSV file, relative from the directory from where the script is
         being run, unless it's an absolute path.
-    :return: A generator that yields the rows of the CSV file as a list of strings.
+    :return: A generator that yields the rows of the CSV file as a dictionary of fields.
     """
     with open(filename) as csv_file:
-        yield from csv.reader(csv_file)
+        reader = csv.reader(csv_file)
+        fields = next(reader)
+        # dict(zip(a, b)) creates a dictionary with keys from a and values from b
+        yield from (dict(zip(fields, row)) for row in reader)
 
 
 if __name__ == "__main__":
