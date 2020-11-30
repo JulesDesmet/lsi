@@ -130,4 +130,4 @@ dmypy.json
 
 # Data files
 data/news_dataset.csv
-nltk/
+nltk/*/
