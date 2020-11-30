@@ -4,13 +4,13 @@ import csv
 from os.path import dirname, join
 from typing import Generator, Iterable
 
-from nltk import data, pos_tag_sents, word_tokenize
+from nltk import data, pos_tag_sents, sent_tokenize, word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 
 
 # This should be the directory root (assuming this file is in `{product_root}/src/`)
-NLTK_PATH = join(dirname(dirname(__file__)), "nltk")
+data.path = [join(dirname(dirname(__file__)), "nltk")]
 
 
 def read_csv(filename: str) -> Generator[dict[str, str], None, None]:
@@ -32,6 +32,16 @@ def read_csv(filename: str) -> Generator[dict[str, str], None, None]:
         yield from (dict(zip(fields, row)) for row in reader)
 
 
+def split_text(text: str) -> list[list[str]]:
+    """
+    Splits the text strings into a list of sentences, which are lists of words.
+
+    :param text: A string of text.
+    :return: A list of lists of strings, which contain the text per word per sentence.
+    """
+    return [word_tokenize(sentence) for sentence in sent_tokenize(text)]
+
+
 def lemmatize(text: Iterable[Iterable[str]]) -> Generator[str, None, None]:
     """
     Replaces each word in the text string with its lemma. This method uses the nltk
@@ -45,8 +55,6 @@ def lemmatize(text: Iterable[Iterable[str]]) -> Generator[str, None, None]:
     :return: A generator that yields the lemmas. These can be concatenated into a string
         by using the " ".join(...) function.
     """
-    # Set the NLTK data path
-    data.path = [NLTK_PATH]
     tag_dict = {
         "J": wordnet.ADJ,
         "N": wordnet.NOUN,
@@ -65,10 +73,11 @@ def lemmatize(text: Iterable[Iterable[str]]) -> Generator[str, None, None]:
 
 
 if __name__ == "__main__":
-    result = lemmatize(
-        [
-            "this is a test string the cat is sitting with the bats on the striped "
-            "mat under many badly flying geese".split(" ")
-        ]
-    )
-    print(" ".join(result))
+
+    for index, data in enumerate(read_csv("data/news_dataset.csv")):
+        text = split_text(data["content"])
+
+        print(" ".join(lemmatize(text))[:200])
+
+        if index == 10:
+            break
