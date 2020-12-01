@@ -1,5 +1,8 @@
 # LSI
 
+We wrote the code for this project for Python 3.9. It can't be run with older
+versions of Python.
+
 ## Preprocessing
 
 The preprocessing of the data is implemented in the
