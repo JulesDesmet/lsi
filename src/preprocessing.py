@@ -6,7 +6,8 @@ from typing import Generator, Iterable
 
 from nltk import data, pos_tag_sents, sent_tokenize, word_tokenize
 from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
+from nltk.corpus import wordnet, stopwords
+
 
 
 # This should be the directory root (assuming this file is in `{product_root}/src/`)
@@ -72,12 +73,28 @@ def lemmatize(text: Iterable[Iterable[str]]) -> Generator[str, None, None]:
     )
 
 
+def remove_stopwords(text: Iterable[str]) -> Generator[str, None, None]:
+    """
+    Stop words are commonly used words("the","a","an","in")
+    NLTK Stores a list of these stopwords that we use to remove them from our CSV
+    :param text: The list of words that is to be checked for stop words, this is the list that is returned by the lemmatize function
+    :return: A generator that yields all the words that are not stop words. These can be concatenated into a string
+        by using the " ".join(...) function.
+    """
+    stop_words = set(stopwords.words('english'))
+    return (
+        word
+        for word in text
+        if word not in stop_words
+    )
+
+
 if __name__ == "__main__":
 
     for index, data in enumerate(read_csv("data/news_dataset.csv")):
         text = split_text(data["content"])
 
-        print(" ".join(lemmatize(text))[:200])
-
+        #print(" ".join(lemmatize(text))[:200])
+        print(" ".join(remove_stopwords(lemmatize(text)))[:200])
         if index == 10:
             break
