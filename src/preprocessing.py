@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import csv
+import string
 from os.path import dirname, join
 from typing import Generator, Iterable
 
@@ -40,6 +41,16 @@ def split_text(text: str) -> list[list[str]]:
     :param text: A string of text.
     :return: A list of lists of strings, which contain the text per word per sentence.
     """
+
+    # Removing punctuation
+
+    trantab = str.maketrans(dict.fromkeys(list(string.punctuation)))
+    text = text.translate(trantab)
+
+    # Case folding
+    text = text.lower()
+
+    # tokenize
     return [word_tokenize(sentence) for sentence in sent_tokenize(text)]
 
 
@@ -66,6 +77,7 @@ def lemmatize(text: Iterable[Iterable[str]]) -> Generator[str, None, None]:
     # Tags the words with their type/pos (part of speech)
     # Then translates the tags using `tag_dict`
     # And finally lemmatizes the words if possible
+
     return (
         lemmatizer.lemmatize(word, tag_dict[tag[0]]) if tag[0] in tag_dict else word
         for sentence in pos_tag_sents(text)  # Outer loop
