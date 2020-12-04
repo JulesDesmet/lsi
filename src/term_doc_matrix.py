@@ -61,7 +61,3 @@ class TfIdf:
         tf = self.term_frequencies[document_id][term]
         idf = log2(self.nr_documents / self.inverse_doc_frequencies[term])
         return tf * idf
-
-
-if __name__ == "__main__":
-    pass
