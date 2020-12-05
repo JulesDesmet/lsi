@@ -37,10 +37,14 @@ class TfIdf:
 
         :param document: The contents of the document as an iterable collection of
             words.
-        :return: An identifier for the added document.
+        :return: An identifier for the added document, or -1 if the document wasn't
+            added.
         """
         occurrences = Counter(document)
+        if not occurrences:
+            return -1
         most_common = occurrences.most_common(1)[0][1]
+
         self.term_frequencies.append(
             {term: count / most_common for term, count in occurrences.items()}
         )
