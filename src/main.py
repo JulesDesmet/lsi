@@ -2,8 +2,9 @@
 
 from argparse import ArgumentParser, Namespace
 from multiprocessing import Process, Queue, set_start_method
+from queue import Empty
 from time import time
-from typing import Any
+from typing import Optional
 
 from preprocessing import read_csv, split_text, lemmatize, remove_stopwords
 from term_doc_matrix import TfIdf
@@ -37,17 +38,25 @@ class BaseProcess:
         """
         return int(document["id"]), document["title"] + " " + document["content"]
 
-    def process_data(self, data_id: int, data: str) -> None:
+    def process_data(
+        self, data_id: int, data: str, add_document: bool
+    ) -> Optional[dict[str, float]]:
         """
         Preprocesses and processes a document.
 
         :param data_id: The document's ID.
         :param data: The content of the document.
+        :param add_document: Whether the document should immediately be added to the
+            TF.IDF collection.
+        :return: The TF.IDF scores of each term in the document, unless the document was
+            added to the collection. In that case nothing is returned.
         """
         preprocessed = remove_stopwords(lemmatize(split_text(data)))
-        index = self.tfidf.add_document(preprocessed)
-        if index != -1:
-            self.data_ids[index] = data_id
+        if not add_document:
+            return self.tfidf.process_document(preprocessed)
+        else:
+            index = self.tfidf.add_document(preprocessed)
+            self.data_ids[data_id] = index
 
     def run(self, filename: str) -> None:
         """
@@ -57,7 +66,7 @@ class BaseProcess:
             the code is being run.
         """
         for data in read_csv(filename):
-            self.process_data(*self.get_data(data))
+            self.process_data(*self.get_data(data), True)
 
 
 class WorkerProcess(BaseProcess):
@@ -66,10 +75,7 @@ class WorkerProcess(BaseProcess):
     used with a `ManagerProcess`, which sends documents through queues to its workers.
     """
 
-    process: Process
-    queue: Queue
-
-    def __init__(self, queue: Queue):
+    def __init__(self, document_queue: Queue, result_queue: Queue, proc_id: int):
         """
         Initialises the `Process` object and the document queue.
 
@@ -77,16 +83,21 @@ class WorkerProcess(BaseProcess):
             supposed to be processing.
         """
         super().__init__()
-        self.queue = queue
+        self.document_queue = document_queue
+        self.result_queue = result_queue
         self.process = Process(target=self.run)
+        self.proc_id = proc_id
 
     def run(self) -> None:
         """
         Processes all of the documents it receives in its queue. The process will stop
         once it finds `None` in its queue.
         """
-        while (data := self.queue.get()) is not None:
-            self.process_data(*data)
+        print(f"Process {self.proc_id} has started.")
+        while (data := self.document_queue.get()) is not None:
+            self.process_data(*data, True)
+        self.result_queue.put((self.tfidf, self.data_ids))
+        print(f"Process {self.proc_id} has finished.")
 
 
 class ManagerProcess(BaseProcess):
@@ -94,14 +105,7 @@ class ManagerProcess(BaseProcess):
     A manager process that uses worker processes to process a collection of documents.
     """
 
-    # The queue through which documents are sent to the workers
-    queue: Queue
-    # The worker processes this manager manages
-    processes: list[WorkerProcess]
-    # Whether the manager also processes documents; otherwise it just distributes them
-    worker_manager: bool
-
-    def __init__(self, nr_procs: int = 1, worker_manager: bool = False):
+    def __init__(self, nr_procs: int = 1):
         """
         Initialises the worker processes and their queues.
 
@@ -109,9 +113,12 @@ class ManagerProcess(BaseProcess):
             the manager.
         """
         super().__init__()
-        self.queue = Queue()
-        self.processes = [WorkerProcess(self.queue) for i in range(nr_procs - 1)]
-        self.worker_manager = worker_manager
+        self.document_queue = Queue()
+        self.result_queue = Queue()
+        self.processes = [
+            WorkerProcess(self.document_queue, self.result_queue, i + 1)
+            for i in range(nr_procs - 1)
+        ]
 
     def run(self, filename: str) -> None:
         """
@@ -125,27 +132,31 @@ class ManagerProcess(BaseProcess):
             proc.process.start()
         nr_procs = len(self.processes) + 1
 
-        for index, data in enumerate(read_csv(filename)):
-            data = self.get_data(data)
+        # Distribute the documents by simply putting them in a queue
+        print("Document distribution has started.")
+        for data in read_csv(filename):
 
-            # If the manager isn't supposed to process documents, simply fill the queue
-            # Else, make sure the workers can stay busy by keeping tasks in the queue
-            # We use three times the number of processes as the buffer size
-            if not self.worker_manager or self.queue.qsize() < 3 * nr_procs:
-                self.queue.put(data)
-            # If the queue contains enough items, then the manager can work on it
+            if self.document_queue.qsize() < 3 * nr_procs:
+                self.document_queue.put(self.get_data(data))
             else:
-                self.process_data(*data)
-
-            # TODO remove after testing
-            if index == 9999:
-                break
+                self.process_data(*self.get_data(data), True)
+        print("Document distribution has finished.")
 
         # Signal to the workers that all of the documents have been distributed
         for _ in range(nr_procs - 1):
-            self.queue.put(None)
+            self.document_queue.put(None)
 
-        # TODO gather data
+        # Collect all of the TF scores returned by the workers
+        print("Result aggregation has started.")
+        for _ in range(nr_procs - 1):
+            tfidf, data_ids = self.result_queue.get()
+
+            self.tfidf.term_frequencies.extend(tfidf.term_frequencies)
+            self.tfidf.inverse_doc_frequencies += tfidf.inverse_doc_frequencies
+            offset = len(self.data_ids)
+            for data_id, document_id in data_ids.items():
+                self.data_ids[data_id] = offset + document_id
+        print("Result aggregation has finished.")
 
         # Wait for all of the workers to finish
         for proc in self.processes:
@@ -161,7 +172,6 @@ def parse_arguments() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("filename", nargs="?", default="data/news_dataset.csv")
     parser.add_argument("--threads", "-j", default=1, type=int)
-    parser.add_argument("--worker-manager", "-w", action="store_true")
 
     return parser.parse_args()
 
@@ -169,17 +179,17 @@ def parse_arguments() -> Namespace:
 if __name__ == "__main__":
     args = parse_arguments()
 
-    # Force the manager to work if it's the only process
-    if args.threads == 1:
-        args.worker_manager = True
-
     start = time()
-    manager = ManagerProcess(args.threads, args.worker_manager)
-    manager.run(args.filename)
+    if args.threads == 1:
+        process = BaseProcess()
+        process.run(args.filename)
+    else:
+        manager = ManagerProcess(args.threads)
+        manager.run(args.filename)
     end = time()
+
+    print(len(manager.data_ids))
 
     t = end - start
     print(t, "seconds")
     print(int(t) // 60, "minutes", t % 60, "seconds")
-
-    # 1:28:47.794076442718506 (single thread, full dataset, preprocessing + tf.idf)

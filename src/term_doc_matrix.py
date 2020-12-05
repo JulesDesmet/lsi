@@ -29,6 +29,19 @@ class TfIdf:
         """
         return len(self.term_frequencies)
 
+    def process_document(self, document: Iterable[str]) -> dict[str, float]:
+        """
+        Computes the TF scores of each term in the document.
+
+        :return: A dictionary containing all of the document's terms and their TF
+            scores.
+        """
+        occurrences = Counter(document)
+        if not occurrences:
+            return {}
+        most_common = occurrences.most_common(1)[0][1]
+        return {term: count / most_common for term, count in occurrences.items()}
+
     def add_document(self, document: Iterable[str]) -> int:
         """
         Adds a document to the collection. The TF score is computed for each distinct
@@ -40,15 +53,9 @@ class TfIdf:
         :return: An identifier for the added document, or -1 if the document wasn't
             added.
         """
-        occurrences = Counter(document)
-        if not occurrences:
-            return -1
-        most_common = occurrences.most_common(1)[0][1]
-
-        self.term_frequencies.append(
-            {term: count / most_common for term, count in occurrences.items()}
-        )
-        self.inverse_doc_frequencies += {term: 1 for term in occurrences}
+        term_frequencies = self.process_document(document)
+        self.term_frequencies.append(term_frequencies)
+        self.inverse_doc_frequencies += {term: 1 for term in term_frequencies}
         return len(self.term_frequencies) - 1
 
     def __call__(self, document_id: int, term: str) -> float:
