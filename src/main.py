@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+from argparse import ArgumentParser, Namespace
 from multiprocessing import Process, Queue, set_start_method
+from time import time
+from typing import Any
 
 from preprocessing import read_csv, split_text, lemmatize, remove_stopwords
 from term_doc_matrix import TfIdf
@@ -91,12 +94,14 @@ class ManagerProcess(BaseProcess):
     A manager process that uses worker processes to process a collection of documents.
     """
 
+    # The queue through which documents are sent to the workers
+    queue: Queue
     # The worker processes this manager manages
     processes: list[WorkerProcess]
-    # The queues through which documents are sent to the workers, associated by index
-    queues: list[Queue]
+    # Whether the manager also processes documents; otherwise it just distributes them
+    worker_manager: bool
 
-    def __init__(self, nr_procs: int = 1):
+    def __init__(self, nr_procs: int = 1, worker_manager: bool = False):
         """
         Initialises the worker processes and their queues.
 
@@ -104,8 +109,9 @@ class ManagerProcess(BaseProcess):
             the manager.
         """
         super().__init__()
-        self.queues = [Queue() for _ in range(nr_procs - 1)]
-        self.processes = [WorkerProcess(self.queues[i]) for i in range(nr_procs - 1)]
+        self.queue = Queue()
+        self.processes = [WorkerProcess(self.queue) for i in range(nr_procs - 1)]
+        self.worker_manager = worker_manager
 
     def run(self, filename: str) -> None:
         """
@@ -117,25 +123,27 @@ class ManagerProcess(BaseProcess):
         # Start the worker processes
         for proc in self.processes:
             proc.process.start()
+        nr_procs = len(self.processes) + 1
 
         for index, data in enumerate(read_csv(filename)):
-            proc_id = index % (len(self.processes) + 1)
-            data_id, content = self.get_data(data)
+            data = self.get_data(data)
 
-            # Process one out of every `len(self.processes) + 1` in this process
-            if proc_id == len(self.processes):
-                self.process_data(data_id, content)
-            # Distribute the other `len(self.processes)` evenly to the workers
+            # If the manager isn't supposed to process documents, simply fill the queue
+            # Else, make sure the workers can stay busy by keeping tasks in the queue
+            # We use three times the number of processes as the buffer size
+            if not self.worker_manager or self.queue.qsize() < 3 * nr_procs:
+                self.queue.put(data)
+            # If the queue contains enough items, then the manager can work on it
             else:
-                self.queues[proc_id].put((data_id, content))
+                self.process_data(*data)
 
             # TODO remove after testing
             if index == 9999:
                 break
 
         # Signal to the workers that all of the documents have been distributed
-        for queue in self.queues:
-            queue.put(None)
+        for _ in range(nr_procs - 1):
+            self.queue.put(None)
 
         # TODO gather data
 
@@ -144,22 +152,34 @@ class ManagerProcess(BaseProcess):
             proc.process.join()
 
 
+def parse_arguments() -> Namespace:
+    """
+    Parses the command line arguments using the `argparse` library.
+
+    :return: A namespace containing the parsed command line arguments.
+    """
+    parser = ArgumentParser()
+    parser.add_argument("filename", nargs="?", default="data/news_dataset.csv")
+    parser.add_argument("--threads", "-j", default=1, type=int)
+    parser.add_argument("--worker-manager", "-w", action="store_true")
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_arguments()
 
-    # Allow some arguments for this script (in this exact order without leaving any out)
-    # 1. A dataset in CSV format            (default = data/news_dataset.csv)
-    from sys import argv
-
-    filename = argv[1] if len(argv) >= 2 else "data/news_dataset.csv"
-
-    from time import time
+    # Force the manager to work if it's the only process
+    if args.threads == 1:
+        args.worker_manager = True
 
     start = time()
-    manager = ManagerProcess(12)
-    manager.run(filename)
+    manager = ManagerProcess(args.threads, args.worker_manager)
+    manager.run(args.filename)
     end = time()
 
     t = end - start
     print(t, "seconds")
     print(int(t) // 60, "minutes", t % 60, "seconds")
-    # 1:28:47.794076442718506 (single threaded preprocessing + tf.idf)
+
+    # 1:28:47.794076442718506 (single thread, full dataset, preprocessing + tf.idf)
