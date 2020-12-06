@@ -17,3 +17,8 @@ This, however, does not install all of the required files. In order to run the
 [setup.py](./nltk/setup.py). This will install all of the data, required for our
 code, in the `nltk` directory.
 
+### TF.IDF scores
+
+```
+TODO different weights for words from title
+```
