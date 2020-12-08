@@ -57,7 +57,9 @@ class UtilityTestCase(BaseTestCase):
 
 
 class TfIdfTestCase(BaseTestCase):
-    """"""
+    """
+    A test case that tests the methods of the `TfIdf` class.
+    """
 
     def setUp(self) -> None:
         """
@@ -159,7 +161,9 @@ class TfIdfTestCase(BaseTestCase):
 
 
 class MultiProcessTestCase(BaseTestCase):
-    """"""
+    """
+    A test case that tests the `Manager`- and `WorkerProcess` classes.         .
+    """
 
     def test_comparison_single_multi(self) -> None:
         """
