@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from argparse import ArgumentParser, Namespace
+from logging import debug
 from multiprocessing import Process, Queue, set_start_method
 from queue import Empty
 from time import time
@@ -18,7 +19,7 @@ class BaseProcess:
 
     # The TF.IDF collection object for the process
     tfidf: TfIdf
-    # A dictionary mapping the IDs of the TF.IDF object to the document IDs
+    # A dictionary mapping the IDs of the TF.IDF objects to their indices
     data_ids: dict[int, int]
 
     def __init__(self):
@@ -93,11 +94,11 @@ class WorkerProcess(BaseProcess):
         Processes all of the documents it receives in its queue. The process will stop
         once it finds `None` in its queue.
         """
-        print(f"Process {self.proc_id} has started.")
+        debug(f"Process {self.proc_id} has started.")
         while (data := self.document_queue.get()) is not None:
             self.process_data(*data, True)
         self.result_queue.put((self.tfidf, self.data_ids))
-        print(f"Process {self.proc_id} has finished.")
+        debug(f"Process {self.proc_id} has finished.")
 
 
 class ManagerProcess(BaseProcess):
@@ -132,22 +133,27 @@ class ManagerProcess(BaseProcess):
             proc.process.start()
         nr_procs = len(self.processes) + 1
 
+        # Simply call the runner of the `BaseProcess` subclass if there are no workers
+        if nr_procs == 1:
+            BaseProcess.run(self, filename)
+            return
+
         # Distribute the documents by simply putting them in a queue
-        print("Document distribution has started.")
+        debug("Document distribution has started.")
         for data in read_csv(filename):
 
             if self.document_queue.qsize() < 3 * nr_procs:
                 self.document_queue.put(self.get_data(data))
             else:
                 self.process_data(*self.get_data(data), True)
-        print("Document distribution has finished.")
+        debug("Document distribution has finished.")
 
         # Signal to the workers that all of the documents have been distributed
         for _ in range(nr_procs - 1):
             self.document_queue.put(None)
 
         # Collect all of the TF scores returned by the workers
-        print("Result aggregation has started.")
+        debug("Result aggregation has started.")
         for _ in range(nr_procs - 1):
             tfidf, data_ids = self.result_queue.get()
 
@@ -156,7 +162,7 @@ class ManagerProcess(BaseProcess):
             offset = len(self.data_ids)
             for data_id, document_id in data_ids.items():
                 self.data_ids[data_id] = offset + document_id
-        print("Result aggregation has finished.")
+        debug("Result aggregation has finished.")
 
         # Wait for all of the workers to finish
         for proc in self.processes:
@@ -188,8 +194,8 @@ if __name__ == "__main__":
         manager.run(args.filename)
     end = time()
 
-    print(len(manager.data_ids))
+    debug(len(manager.data_ids))
 
     t = end - start
-    print(t, "seconds")
-    print(int(t) // 60, "minutes", t % 60, "seconds")
+    debug(t, "seconds")
+    debug(int(t) // 60, "minutes", t % 60, "seconds")

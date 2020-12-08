@@ -6,6 +6,7 @@ from math import log2
 from typing import Union
 from unittest import main, TestCase
 
+from main import BaseProcess, ManagerProcess
 from term_doc_matrix import TfIdf
 
 
@@ -155,6 +156,36 @@ class TfIdfTestCase(BaseTestCase):
 
         with self.subTest(document_id=4, word="a"):
             self.assertEqual(self.tfidf(4, "a"), 0)
+
+
+class MultiProcessTestCase(BaseTestCase):
+    """"""
+
+    def test_comparison_single_multi(self) -> None:
+        """
+        Tests the multi-process runner by comparing it to the 'normal' runner. .
+        The data for this test can be found in `src/test.csv`.
+        """
+        filename = __file__.rstrip("py") + "csv"
+
+        reference = BaseProcess()
+        sing_proc = ManagerProcess(nr_procs=1)
+        doub_proc = ManagerProcess(nr_procs=2)
+        quad_proc = ManagerProcess(nr_procs=4)
+
+        reference.run(filename)
+
+        for process in (sing_proc, doub_proc, quad_proc):
+            with self.subTest(nr_procs=len(process.processes) + 1):
+                process.run(filename)
+
+                for data_id, ref_index in reference.data_ids.items():
+                    self.assertIn(data_id, process.data_ids)
+                    proc_index = process.data_ids[data_id]
+                    self.assertEqual(
+                        reference.tfidf.term_frequencies[ref_index],
+                        process.tfidf.term_frequencies[proc_index],
+                    )
 
 
 if __name__ == "__main__":
