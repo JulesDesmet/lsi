@@ -67,7 +67,10 @@ class TfIdf:
         :param term: The term for which the TF.IDF score is being requested.
         :return: The TF.IDF score.
         """
-        if term not in self.term_frequencies[document_id]:
+        if (
+            not -1 < document_id < len(self.term_frequencies)
+            or term not in self.term_frequencies[document_id]
+        ):
             return 0.0
         tf = self.term_frequencies[document_id][term]
         idf = log2(self.nr_documents / self.inverse_doc_frequencies[term])
