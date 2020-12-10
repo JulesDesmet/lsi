@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from argparse import ArgumentParser, Namespace
-from logging import debug
+from logging import debug, DEBUG, getLogger
 from multiprocessing import Process, Queue, set_start_method
 from queue import Empty
 from time import time
@@ -182,6 +182,7 @@ def parse_arguments() -> Namespace:
 
 
 if __name__ == "__main__":
+    getLogger().setLevel(DEBUG)
     args = parse_arguments()
 
     start = time()
@@ -196,5 +197,5 @@ if __name__ == "__main__":
     debug(len(manager.data_ids))
 
     t = end - start
-    debug(t, "seconds")
-    debug(int(t) // 60, "minutes", t % 60, "seconds")
+    debug(f"{t} seconds")
+    debug(f"{int(t) // 60} minutes {t % 60} seconds")
