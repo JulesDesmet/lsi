@@ -107,7 +107,7 @@ class TfIdf:
         should only be called once all of the documents have been added.
 
         :param document_id: The identifier of the document.
-        :param term: The term for which the TF.IDF score is being requested.
+        :param term: The term or term ID for which the TF.IDF score is being requested.
         :return: The TF.IDF score.
         """
         if isinstance(term, str):
