@@ -16,7 +16,9 @@ class TfIdf:
         """
         Initialises the frequency collections.
         """
-        self.term_frequencies: list[dict[str, float]] = []
+        self.terms: list[str] = []
+        self.term_ids: dict[str, int] = {}
+        self.term_frequencies: list[dict[int, float]] = []
         self.inverse_doc_frequencies: Counter = Counter()
 
     @property
@@ -54,8 +56,20 @@ class TfIdf:
             added.
         """
         term_frequencies = self.process_document(document)
-        self.term_frequencies.append(term_frequencies)
-        self.inverse_doc_frequencies += {term: 1 for term in term_frequencies}
+
+        # Add the terms to the list if it's not yet included
+        for term in document:
+            if term not in self.term_ids:
+                self.term_ids[term] = len(self.terms)
+                self.terms.append(term)
+
+        # Create a new dictionary that maps the term IDs instead of the terms
+        term_id_frequencies = {
+            self.term_ids[term]: count for term, count in term_frequencies.items()
+        }
+
+        self.term_frequencies.append(term_id_frequencies)
+        self.inverse_doc_frequencies += {term: 1 for term in term_id_frequencies}
         return len(self.term_frequencies) - 1
 
     def __call__(self, document_id: int, term: str) -> float:
@@ -67,11 +81,10 @@ class TfIdf:
         :param term: The term for which the TF.IDF score is being requested.
         :return: The TF.IDF score.
         """
-        if (
-            not -1 < document_id < len(self.term_frequencies)
-            or term not in self.term_frequencies[document_id]
-        ):
+        if not -1 < document_id < self.nr_documents or term not in self.term_ids:
             return 0.0
-        tf = self.term_frequencies[document_id][term]
-        idf = log2(self.nr_documents / self.inverse_doc_frequencies[term])
+        term_id = self.term_ids[term]
+
+        tf = self.term_frequencies[document_id][term_id]
+        idf = log2(self.nr_documents / self.inverse_doc_frequencies[term_id])
         return tf * idf
