@@ -22,7 +22,12 @@ class TfIdf:
         self.inverse_doc_frequencies: Counter = Counter()
 
     def __iadd__(self, tfidf: "TfIdf") -> "TfIdf":
-        """"""
+        """
+        Adds the results from a different TfIdf object to this object's results.
+
+        :param tfidf: The other TfIdf object.
+        :return: `self`
+        """
 
         # Create a translation dictionary, which maps the other TfIdf object's term IDs
         # to this object's term IDs; also insert missing terms in this object

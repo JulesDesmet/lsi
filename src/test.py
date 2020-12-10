@@ -33,7 +33,16 @@ class BaseTestCase(TestCase):
 
     @staticmethod
     def convert_mapping(tfidf: TfIdf, mapping: dict[int, Any]) -> dict[str, Any]:
-        """"""
+        """
+        Converts a dictionary using term IDs as keys to a dictionary using the
+        associated terms as keys.
+
+        :param tfidf: The TfIdf object containing the term ID dictionary.
+        :param mapping: The dictionary, using term IDs as keys, that should be
+            converted.
+        :return: The same dictionary as the parameter `mapping`, but with the actual
+            terms as keys.
+        """
         return {tfidf.terms[term_id]: freq for term_id, freq in mapping.items()}
 
 
