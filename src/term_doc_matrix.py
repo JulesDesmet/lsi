@@ -2,7 +2,7 @@
 
 from collections import Counter
 from math import log2
-from typing import Iterable
+from typing import Callable, Iterable, Union
 
 
 class TfIdf:
@@ -101,7 +101,7 @@ class TfIdf:
         self.inverse_doc_frequencies += {term: 1 for term in term_id_frequencies}
         return len(self.term_frequencies) - 1
 
-    def __call__(self, document_id: int, term: str) -> float:
+    def __call__(self, document_id: int, term: Union[str, int]) -> float:
         """
         Returns the TF.IDF score for the given term in the given document. This method
         should only be called once all of the documents have been added.
@@ -110,14 +110,16 @@ class TfIdf:
         :param term: The term for which the TF.IDF score is being requested.
         :return: The TF.IDF score.
         """
+        if isinstance(term, str):
+            if term not in self.term_ids:
+                return 0.0
+            term = self.term_ids[term]
         if (
             not -1 < document_id < self.nr_documents
-            or term not in self.term_ids
-            or self.term_ids[term] not in self.term_frequencies[document_id]
+            or term not in self.term_frequencies[document_id]
         ):
             return 0.0
-        term_id = self.term_ids[term]
 
-        tf = self.term_frequencies[document_id][term_id]
-        idf = log2(self.nr_documents / self.inverse_doc_frequencies[term_id])
+        tf = self.term_frequencies[document_id][term]
+        idf = log2(self.nr_documents / self.inverse_doc_frequencies[term])
         return tf * idf
