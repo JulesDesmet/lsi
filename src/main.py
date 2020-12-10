@@ -157,8 +157,7 @@ class ManagerProcess(BaseProcess):
         for _ in range(nr_procs - 1):
             tfidf, data_ids = self.result_queue.get()
 
-            self.tfidf.term_frequencies.extend(tfidf.term_frequencies)
-            self.tfidf.inverse_doc_frequencies += tfidf.inverse_doc_frequencies
+            self.tfidf += tfidf
             offset = len(self.data_ids)
             for data_id, document_id in data_ids.items():
                 self.data_ids[data_id] = offset + document_id

@@ -3,8 +3,8 @@
 from collections import Counter
 from itertools import product
 from math import log2
-from typing import Union
-from unittest import main, TestCase
+from typing import Any, Union
+from unittest import main, TestCase, skip
 
 from main import BaseProcess, ManagerProcess
 from term_doc_matrix import TfIdf
@@ -30,6 +30,11 @@ class BaseTestCase(TestCase):
             for code in document
             for word in ([code] if isinstance(code, str) else [code[0]] * code[1])
         ]
+
+    @staticmethod
+    def convert_mapping(tfidf: TfIdf, mapping: dict[int, Any]) -> dict[str, Any]:
+        """"""
+        return {tfidf.terms[term_id]: freq for term_id, freq in mapping.items()}
 
 
 class UtilityTestCase(BaseTestCase):
@@ -112,10 +117,15 @@ class TfIdfTestCase(BaseTestCase):
 
             with self.subTest(document=document, expected=expected):
                 document_id = self.tfidf.add_document(document)
-                self.assertEqual(self.tfidf.term_frequencies[document_id], expected)
+
+                mapping = self.convert_mapping(
+                    self.tfidf, self.tfidf.term_frequencies[document_id]
+                )
+                self.assertEqual(mapping, expected)
 
         self.assertEqual(
-            self.tfidf.inverse_doc_frequencies, Counter(a=3, b=2, c=2, d=2, e=1)
+            self.convert_mapping(self.tfidf, self.tfidf.inverse_doc_frequencies),
+            Counter(a=3, b=2, c=2, d=2, e=1),
         )
 
     def test_call(self) -> None:
@@ -141,12 +151,16 @@ class TfIdfTestCase(BaseTestCase):
 
         # Verify that the internal data of `self.tfidf` is correct
         self.assertEqual(
-            self.tfidf.term_frequencies,
+            [
+                self.convert_mapping(self.tfidf, freq)
+                for freq in self.tfidf.term_frequencies
+            ],
             # Filter out the 0.0 values because the `TfIdf` class does this as well
             [{term: tf for term, tf in doc.items() if tf != 0} for doc in tf_scores],
         )
         self.assertEqual(
-            self.tfidf.inverse_doc_frequencies, Counter(a=3, b=2, c=3, d=4)
+            self.convert_mapping(self.tfidf, self.tfidf.inverse_doc_frequencies),
+            Counter(a=3, b=2, c=3, d=4),
         )
 
         # Iterate over each document and term
@@ -178,6 +192,10 @@ class MultiProcessTestCase(BaseTestCase):
         quad_proc = ManagerProcess(nr_procs=4)
 
         reference.run(filename)
+        ref_freqs = [
+            self.convert_mapping(reference.tfidf, freqs)
+            for freqs in reference.tfidf.term_frequencies
+        ]
 
         for process in (sing_proc, doub_proc, quad_proc):
             with self.subTest(nr_procs=len(process.processes) + 1):
@@ -186,9 +204,12 @@ class MultiProcessTestCase(BaseTestCase):
                 for data_id, ref_index in reference.data_ids.items():
                     self.assertIn(data_id, process.data_ids)
                     proc_index = process.data_ids[data_id]
+
                     self.assertEqual(
-                        reference.tfidf.term_frequencies[ref_index],
-                        process.tfidf.term_frequencies[proc_index],
+                        ref_freqs[ref_index],
+                        self.convert_mapping(
+                            process.tfidf, process.tfidf.term_frequencies[proc_index]
+                        ),
                     )
 
 

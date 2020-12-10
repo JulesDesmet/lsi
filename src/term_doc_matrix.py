@@ -21,6 +21,30 @@ class TfIdf:
         self.term_frequencies: list[dict[int, float]] = []
         self.inverse_doc_frequencies: Counter = Counter()
 
+    def __iadd__(self, tfidf: "TfIdf") -> "TfIdf":
+        """"""
+
+        # Create a translation dictionary, which maps the other TfIdf object's term IDs
+        # to this object's term IDs; also insert missing terms in this object
+        translation = {}
+        for term, term_id in tfidf.term_ids.items():
+            if term not in self.term_ids:
+                self.term_ids[term] = len(self.terms)
+                self.terms.append(term)
+            translation[term_id] = self.term_ids[term]
+
+        for document_freqs in tfidf.term_frequencies:
+            self.term_frequencies.append(
+                {translation[term_id]: freq for term_id, freq in document_freqs.items()}
+            )
+
+        self.inverse_doc_frequencies += {
+            translation[term_id]: count
+            for term_id, count in tfidf.inverse_doc_frequencies.items()
+        }
+
+        return self
+
     @property
     def nr_documents(self) -> int:
         """
@@ -58,7 +82,7 @@ class TfIdf:
         term_frequencies = self.process_document(document)
 
         # Add the terms to the list if it's not yet included
-        for term in document:
+        for term in term_frequencies:
             if term not in self.term_ids:
                 self.term_ids[term] = len(self.terms)
                 self.terms.append(term)
@@ -81,7 +105,11 @@ class TfIdf:
         :param term: The term for which the TF.IDF score is being requested.
         :return: The TF.IDF score.
         """
-        if not -1 < document_id < self.nr_documents or term not in self.term_ids:
+        if (
+            not -1 < document_id < self.nr_documents
+            or term not in self.term_ids
+            or self.term_ids[term] not in self.term_frequencies[document_id]
+        ):
             return 0.0
         term_id = self.term_ids[term]
 
