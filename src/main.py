@@ -68,6 +68,7 @@ class BaseProcess:
         """
         for data in read_csv(filename):
             self.process_data(*self.get_data(data), True)
+        self.tfidf.optimise()
 
 
 class WorkerProcess(BaseProcess):
@@ -161,6 +162,8 @@ class ManagerProcess(BaseProcess):
             offset = len(self.data_ids)
             for data_id, document_id in data_ids.items():
                 self.data_ids[data_id] = offset + document_id
+
+        self.tfidf.optimise()
         debug("Result aggregation has finished.")
 
         # Wait for all of the workers to finish

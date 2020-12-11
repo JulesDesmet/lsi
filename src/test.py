@@ -237,7 +237,7 @@ class MultiProcessTestCase(BaseTestCase):
         reference.run(filename)
         ref_freqs = [
             self.convert_mapping(reference.tfidf, freqs)
-            for freqs in reference.tfidf.terms_per_doc
+            for freqs in reference.tfidf.tfidf_scores
         ]
 
         for process in (sing_proc, doub_proc, quad_proc):
@@ -251,7 +251,7 @@ class MultiProcessTestCase(BaseTestCase):
                     self.assertEqual(
                         ref_freqs[ref_index],
                         self.convert_mapping(
-                            process.tfidf, process.tfidf.terms_per_doc[proc_index]
+                            process.tfidf, process.tfidf.tfidf_scores[proc_index]
                         ),
                     )
 
