@@ -128,12 +128,12 @@ class TfIdfTestCase(BaseTestCase):
                 document_id = self.tfidf.add_document(document)
 
                 mapping = self.convert_mapping(
-                    self.tfidf, self.tfidf.term_frequencies[document_id]
+                    self.tfidf, self.tfidf.terms_per_doc[document_id]
                 )
                 self.assertEqual(mapping, expected)
 
         self.assertEqual(
-            self.convert_mapping(self.tfidf, self.tfidf.inverse_doc_frequencies),
+            self.convert_mapping(self.tfidf, self.tfidf.docs_per_term),
             Counter(a=3, b=2, c=2, d=2, e=1),
         )
 
@@ -162,13 +162,13 @@ class TfIdfTestCase(BaseTestCase):
         self.assertEqual(
             [
                 self.convert_mapping(self.tfidf, freq)
-                for freq in self.tfidf.term_frequencies
+                for freq in self.tfidf.terms_per_doc
             ],
             # Filter out the 0.0 values because the `TfIdf` class does this as well
             [{term: tf for term, tf in doc.items() if tf != 0} for doc in tf_scores],
         )
         self.assertEqual(
-            self.convert_mapping(self.tfidf, self.tfidf.inverse_doc_frequencies),
+            self.convert_mapping(self.tfidf, self.tfidf.docs_per_term),
             Counter(a=3, b=2, c=3, d=4),
         )
 
@@ -179,8 +179,8 @@ class TfIdfTestCase(BaseTestCase):
                 expected = tf_scores[document_id][term] * idf_scores[term]
                 self.assertEqual(tfidf_score, expected)
 
-        with self.subTest(document_id=4, word="a"):
-            self.assertEqual(self.tfidf(4, "a"), 0)
+        with self.subTest(document_id=4, word="q"):
+            self.assertEqual(self.tfidf(3, "q"), 0)
 
 
 class MultiProcessTestCase(BaseTestCase):
@@ -203,7 +203,7 @@ class MultiProcessTestCase(BaseTestCase):
         reference.run(filename)
         ref_freqs = [
             self.convert_mapping(reference.tfidf, freqs)
-            for freqs in reference.tfidf.term_frequencies
+            for freqs in reference.tfidf.terms_per_doc
         ]
 
         for process in (sing_proc, doub_proc, quad_proc):
@@ -217,7 +217,7 @@ class MultiProcessTestCase(BaseTestCase):
                     self.assertEqual(
                         ref_freqs[ref_index],
                         self.convert_mapping(
-                            process.tfidf, process.tfidf.term_frequencies[proc_index]
+                            process.tfidf, process.tfidf.terms_per_doc[proc_index]
                         ),
                     )
 
