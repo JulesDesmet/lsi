@@ -111,8 +111,9 @@ class TfIdf:
         for document_id in range(self.nr_documents - 1, -1, -1):
             self.tfidf_scores[document_id] = {
                 term_id: freq * log2(self.nr_documents / self.docs_per_term[term_id])
-                for term_id, freq in sorted(self.terms_per_doc[document_id].items())
+                for term_id, freq in sorted(self.terms_per_doc[-1].items())
             }
+            del self.terms_per_doc[-1]
 
         # Free up some space that we don't need anymore
         self.terms_per_doc = []

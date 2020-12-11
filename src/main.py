@@ -95,11 +95,15 @@ class WorkerProcess(BaseProcess):
         Processes all of the documents it receives in its queue. The process will stop
         once it finds `None` in its queue.
         """
-        debug(f"Process {self.proc_id} has started.")
-        while (data := self.document_queue.get()) is not None:
-            self.process_data(*data, True)
-        self.result_queue.put((self.tfidf, self.data_ids))
-        debug(f"Process {self.proc_id} has finished.")
+        try:
+            debug(f"Process {self.proc_id} has started.")
+            while (data := self.document_queue.get()) is not None:
+                self.process_data(*data, True)
+            self.result_queue.put((self.tfidf, self.data_ids))
+            debug(f"Process {self.proc_id} has finished.")
+
+        except KeyboardInterrupt:
+            debug(f"Process {self.proc_id} has been interrupted.")
 
 
 class ManagerProcess(BaseProcess):
@@ -129,46 +133,52 @@ class ManagerProcess(BaseProcess):
         :param filename: The name of the CSV file; relative to the directory from where
             the code is being run.
         """
-        # Start the worker processes
-        for proc in self.processes:
-            proc.process.start()
-        nr_procs = len(self.processes) + 1
+        try:
+            # Start the worker processes
+            for proc in self.processes:
+                proc.process.start()
+            nr_procs = len(self.processes) + 1
 
-        # Simply call the runner of the `BaseProcess` subclass if there are no workers
-        if nr_procs == 1:
-            BaseProcess.run(self, filename)
-            return
+            # Simply call the runner of the `BaseProcess` subclass if there are no workers
+            if nr_procs == 1:
+                BaseProcess.run(self, filename)
+                return
 
-        # Distribute the documents by simply putting them in a queue
-        debug("Document distribution has started.")
-        for data in read_csv(filename):
+            # Distribute the documents by simply putting them in a queue
+            debug("Process 0 has started.")
+            for data in read_csv(filename):
 
-            if self.document_queue.qsize() < 3 * nr_procs:
-                self.document_queue.put(self.get_data(data))
-            else:
-                self.process_data(*self.get_data(data), True)
-        debug("Document distribution has finished.")
+                if self.document_queue.qsize() < 3 * nr_procs:
+                    self.document_queue.put(self.get_data(data))
+                else:
+                    self.process_data(*self.get_data(data), True)
+            debug("Process 0 has finished.")
 
-        # Signal to the workers that all of the documents have been distributed
-        for _ in range(nr_procs - 1):
-            self.document_queue.put(None)
+            # Signal to the workers that all of the documents have been distributed
+            for _ in range(nr_procs - 1):
+                self.document_queue.put(None)
 
-        # Collect all of the TF scores returned by the workers
-        debug("Result aggregation has started.")
-        for _ in range(nr_procs - 1):
-            tfidf, data_ids = self.result_queue.get()
+            # Collect all of the TF scores returned by the workers
+            debug("Result aggregation has started.")
+            for _ in range(nr_procs - 1):
+                tfidf, data_ids = self.result_queue.get()
 
-            self.tfidf += tfidf
-            offset = len(self.data_ids)
-            for data_id, document_id in data_ids.items():
-                self.data_ids[data_id] = offset + document_id
+                self.tfidf += tfidf
+                offset = len(self.data_ids)
+                for data_id, document_id in data_ids.items():
+                    self.data_ids[data_id] = offset + document_id
 
-        self.tfidf.optimise()
-        debug("Result aggregation has finished.")
+            self.tfidf.optimise()
+            debug("Result aggregation has finished.")
 
-        # Wait for all of the workers to finish
-        for proc in self.processes:
-            proc.process.join()
+            # Wait for all of the workers to finish
+            for proc in self.processes:
+                proc.process.join()
+
+        except KeyboardInterrupt:
+            self.document_queue.close()
+            self.result_queue.close()
+            debug("Process 0 has been interrupted.")
 
 
 def parse_arguments() -> Namespace:
@@ -197,8 +207,5 @@ if __name__ == "__main__":
         manager.run(args.filename)
     end = time()
 
-    debug(len(manager.data_ids))
-
     t = end - start
-    debug(f"{t} seconds")
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
