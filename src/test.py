@@ -45,6 +45,20 @@ class BaseTestCase(TestCase):
         """
         return {tfidf.terms[term_id]: freq for term_id, freq in mapping.items()}
 
+    @staticmethod
+    def get_tfidf_scores(tfidf: TfIdf) -> list[dict[str, float]]:
+        """
+        Returns the TF.IDF score for each document and term. The terms are ordered by
+        their appearance in `tfidf.terms`.
+
+        :param tfidf: The `TfIdf` object that computes the TF.IDF scores.
+        :return: All of the TF.IDF scores in a matrix of floats.
+        """
+        return [
+            {term: tfidf(document_id, term) for term in tfidf.terms}
+            for document_id in range(tfidf.nr_documents)
+        ]
+
 
 class UtilityTestCase(BaseTestCase):
     """
@@ -179,8 +193,28 @@ class TfIdfTestCase(BaseTestCase):
                 expected = tf_scores[document_id][term] * idf_scores[term]
                 self.assertEqual(tfidf_score, expected)
 
-        with self.subTest(document_id=4, word="q"):
+        with self.subTest(document_id=3, word="q"):
             self.assertEqual(self.tfidf(3, "q"), 0)
+
+    def test_optimise(self) -> None:
+        """
+        Tests the `TfIdf.optimise()` function.                                 .
+        """
+        documents = [
+            [("a", 10), ("b", 5), ("c", 5), "d"],
+            ["b", "d"],
+            [("a", 20), ("c", 20), "d"],
+            ["a", ("c", 5), "d"],
+        ]
+        for document in documents:
+            self.tfidf.add_document(self.convert_document(document))
+
+        tfidf_scores = self.get_tfidf_scores(self.tfidf)
+        self.tfidf.optimise()
+
+        self.assertEqual(self.get_tfidf_scores(self.tfidf), tfidf_scores)
+        self.assertEqual(self.tfidf.terms_per_doc, [])
+        self.assertEqual(self.tfidf.docs_per_term, Counter())
 
 
 class MultiProcessTestCase(BaseTestCase):

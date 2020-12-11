@@ -107,7 +107,7 @@ class TfIdf:
         for document_id in range(self.nr_documents - 1, -1, -1):
             self.tfidf_scores[document_id] = {
                 term_id: freq * log2(self.nr_documents / self.docs_per_term[term_id])
-                for term_id, freq in sorted(self.terms_per_doc[-1].items())
+                for term_id, freq in sorted(self.terms_per_doc[document_id].items())
             }
 
         # Free up some space that we don't need anymore
@@ -151,14 +151,16 @@ class TfIdf:
         if isinstance(term, str) and term not in self.term_ids:
             return 0.0
         term_id = term if isinstance(term, int) else self.term_ids[term]
-        if term_id not in self.terms_per_doc[document_id]:
-            return 0.0
 
         # Because `optimise()` is the only function adding to `tfidf_scores`, we can use
         # it to find out whether this function has been called already. If it has been
         # called but `tfidf_scores` is still empty, then it shouldn't matter which
         # function is picked.
         if self.tfidf_scores:
+            if term_id not in self.tfidf_scores[document_id]:
+                return 0.0
             return self.call_post_optimise(document_id, term_id)
         else:
+            if term_id not in self.terms_per_doc[document_id]:
+                return 0.0
             return self.call_pre_optimise(document_id, term_id)
