@@ -9,7 +9,7 @@ from typing import Optional
 
 from preprocessing import read_csv, split_text, lemmatize, remove_stopwords
 from term_doc_matrix import TfIdf
-
+from svd import SVD
 
 class BaseProcess:
     """
@@ -207,5 +207,8 @@ if __name__ == "__main__":
         manager.run(args.filename)
     end = time()
 
+    decomposition = SVD(manager.tfidf)
+
+    decomposition.matrix_multiplication()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
