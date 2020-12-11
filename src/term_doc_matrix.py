@@ -31,8 +31,8 @@ class TfIdf:
         :return: `self`
         """
         # Make sure that either both object have been optimised or neither are
-        if bool(self.tfidf_scores) ^ bool(tfidf.tfidf_scores):
-            raise Exception("Optimise both TfIdf object or optimise neither...")
+        if self.tfidf_scores or tfidf.tfidf_scores:
+            raise Exception("Optimised TfIdf object can't be merged...")
 
         # Create a translation dictionary, which maps the other TfIdf object's term IDs
         # to this object's term IDs; also insert missing terms in this object
@@ -43,24 +43,15 @@ class TfIdf:
                 self.terms.append(term)
             translation[term_id] = self.term_ids[term]
 
-        # If both objects have been optimised
-        if self.tfidf_scores:
-            for tfidf_scores in tfidf.tfidf_scores:
-                self.tfidf_scores.append(
-                    {translation[term_id]: score for term_id, score in tfidf_scores.items()}
-                )
+        for document_freqs in tfidf.terms_per_doc:
+            self.terms_per_doc.append(
+                {translation[term_id]: freq for term_id, freq in document_freqs.items()}
+            )
 
-        # If neither object has been optimised
-        else:
-            for document_freqs in tfidf.terms_per_doc:
-                self.terms_per_doc.append(
-                    {translation[term_id]: freq for term_id, freq in document_freqs.items()}
-                )
-
-            self.docs_per_term += {
-                translation[term_id]: count
-                for term_id, count in tfidf.docs_per_term.items()
-            }
+        self.docs_per_term += {
+            translation[term_id]: count
+            for term_id, count in tfidf.docs_per_term.items()
+        }
         self.nr_documents += tfidf.nr_documents
 
         return self
