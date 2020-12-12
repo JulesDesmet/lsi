@@ -115,6 +115,7 @@ class TfIdf:
             self.tfidf_scores[document_id] = {
                 term: freq * log2(self.nr_documents / len(self.docs_per_term[term]))
                 for term, freq in sorted(self.terms_per_doc[-1].items())
+                if self.nr_documents != len(self.docs_per_term[term])
             }
             del self.terms_per_doc[-1]
 
