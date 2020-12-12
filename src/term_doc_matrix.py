@@ -20,7 +20,7 @@ class TfIdf:
         self.terms: list[str] = []
         self.term_ids: dict[str, int] = {}
         self.terms_per_doc: list[dict[int, float]] = []
-        self.docs_per_term: Counter = Counter()
+        self.docs_per_term: list[set[int]] = []
         self.tfidf_scores: list[dict[int, float]] = []
 
     def __iadd__(self, tfidf: "TfIdf") -> "TfIdf":
@@ -30,9 +30,8 @@ class TfIdf:
         :param tfidf: The other TfIdf object.
         :return: `self`
         """
-        # Make sure that either both object have been optimised or neither are
         if self.tfidf_scores or tfidf.tfidf_scores:
-            raise Exception("Optimised TfIdf object can't be merged...")
+            raise Exception("Optimised TfIdf objects can't be merged...")
 
         # Create a translation dictionary, which maps the other TfIdf object's term IDs
         # to this object's term IDs; also insert missing terms in this object
@@ -41,6 +40,9 @@ class TfIdf:
             if term not in self.term_ids:
                 self.term_ids[term] = len(self.terms)
                 self.terms.append(term)
+                self.docs_per_term.append(tfidf.docs_per_term[term_id])
+            else:
+                self.docs_per_term[term_id] |= self.docs_per_term[term_id]
             translation[term_id] = self.term_ids[term]
 
         for document_freqs in tfidf.terms_per_doc:
@@ -48,12 +50,7 @@ class TfIdf:
                 {translation[term_id]: freq for term_id, freq in document_freqs.items()}
             )
 
-        self.docs_per_term += {
-            translation[term_id]: count
-            for term_id, count in tfidf.docs_per_term.items()
-        }
         self.nr_documents += tfidf.nr_documents
-
         return self
 
     def process_document(self, document: Iterable[str]) -> dict[str, float]:
@@ -80,6 +77,7 @@ class TfIdf:
         :return: An identifier for the added document, or -1 if the document wasn't
             added.
         """
+        document_id = self.nr_documents
         term_frequencies = self.process_document(document)
 
         # Add the terms to the list if it's not yet included
@@ -89,15 +87,20 @@ class TfIdf:
                 self.terms.append(term)
 
         # Create a new dictionary that maps the term IDs instead of the terms
-        term_id_frequencies = {
+        term_id_frequencies: dict[int, int] = {
             self.term_ids[term]: count for term, count in term_frequencies.items()
         }
 
         self.terms_per_doc.append(term_id_frequencies)
-        self.docs_per_term += {term: 1 for term in term_id_frequencies}
+        for term_id in term_id_frequencies:
+            if term_id >= len(self.docs_per_term):
+                self.docs_per_term.extend(set() for _ in range(term_id - len(self.docs_per_term)))
+                self.docs_per_term.append({document_id})
+            else:
+                self.docs_per_term[term_id].add(document_id)
 
         self.nr_documents += 1
-        return self.nr_documents - 1
+        return document_id
 
     def optimise(self) -> None:
         """
@@ -110,14 +113,11 @@ class TfIdf:
         # Additionally, sort the terms for each document
         for document_id in range(self.nr_documents - 1, -1, -1):
             self.tfidf_scores[document_id] = {
-                term_id: freq * log2(self.nr_documents / self.docs_per_term[term_id])
-                for term_id, freq in sorted(self.terms_per_doc[-1].items())
+                term: freq * log2(self.nr_documents / len(self.docs_per_term[term]))
+                for term, freq in sorted(self.terms_per_doc[-1].items())
+                if self.nr_documents != len(self.docs_per_term[term])
             }
             del self.terms_per_doc[-1]
-
-        # Free up some space that we don't need anymore
-        self.terms_per_doc = []
-        self.docs_per_term = Counter()
 
     def call_pre_optimise(self, document_id: int, term_id: int) -> float:
         """
@@ -130,7 +130,7 @@ class TfIdf:
         :return: The TF.IDF score.
         """
         tf = self.terms_per_doc[document_id][term_id]
-        idf = log2(self.nr_documents / self.docs_per_term[term_id])
+        idf = log2(self.nr_documents / len(self.docs_per_term[term_id]))
         return tf * idf
 
     def call_post_optimise(self, document_id: int, term_id: int) -> float:

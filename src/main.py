@@ -146,7 +146,7 @@ class ManagerProcess(BaseProcess):
 
             # Distribute the documents by simply putting them in a queue
             debug("Process 0 has started.")
-            for data in read_csv(filename):
+            for index, data in enumerate(read_csv(filename)):
 
                 if self.document_queue.qsize() < 3 * nr_procs:
                     self.document_queue.put(self.get_data(data))
@@ -199,17 +199,22 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     start = time()
-    if args.threads == 1:
-        process = BaseProcess()
-        process.run(args.filename)
-    else:
-        manager = ManagerProcess(args.threads)
-        manager.run(args.filename)
 
+    try:
+        args = parse_arguments()
+        if args.threads == 1:
+            process = BaseProcess()
+            process.run(args.filename)
+        else:
+            manager = ManagerProcess(args.threads)
+            manager.run(args.filename)
 
-    decomposition = SVD(manager.tfidf)
+#        decomposition = SVD(manager.tfidf)
+#        decomposition.matrix_multiplication()
 
-    decomposition.matrix_multiplication()
+    except KeyboardInterrupt:
+        pass
+
     end = time()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
