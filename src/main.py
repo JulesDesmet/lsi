@@ -205,10 +205,11 @@ if __name__ == "__main__":
     else:
         manager = ManagerProcess(args.threads)
         manager.run(args.filename)
-    end = time()
+
 
     decomposition = SVD(manager.tfidf)
 
     decomposition.matrix_multiplication()
+    end = time()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")

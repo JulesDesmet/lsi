@@ -38,30 +38,40 @@ class SVD:
             result += x1.get(i) ** 2
         result = sqrt(result)
         return result
-
-    def multiply_M_MT(self):
-        result: list[dict] = []
-        print(len(self.tfidf.terms))
-        for i in range(len(self.tfidf.terms)):
+    def matrix_multiplication(self):
+        # This is a M * M_transpose multiplication
+        result: list[dict[int, float]] =[]
+        # rows of matrix M
+        print(self.tfidf(0,10))
+        for i in range(self.tfidf.nr_documents):
+            print(i)
             temp: dict = {}
-            for j in range(len(self.tfidf.terms)):
-                sum = 0
-                for k in range(self.tfidf.nr_documents):
-                    sum = sum + self.tfidf(i,k) * self.tfidf(j,k)
+            # columns of matrix M_T (which will be rows of matrix M)
+            for j in range(self.tfidf.nr_documents):
+                sum = self.efficient_dot(i,j)
+
+                # rows of matrix M_T
+                """                for k in range(self.tfidf.nr_documents):
+                    print("I:"+str(i) +" K:" +str(k) + "J: " +str(j))
+                    sum += self.tfidf(k,i) * self.tfidf(k,j)
+                    """
+
                 temp[j] = sum
             result.append(temp)
         print(result)
 
+    def efficient_dot(self, index: int, index2: int):
+        sum = 0
+        print(len(self.tfidf.tfidf_scores[index]))
+        if len(self.tfidf.tfidf_scores[index]) > len(self.tfidf.tfidf_scores[index2]):
+            for key in self.tfidf.tfidf_scores[index]:
+                if key in self.tfidf.tfidf_scores[index2]:
+                    sum += self.tfidf.tfidf_scores[index].get(key)*self.tfidf.tfidf_scores[index2].get(key)
+        elif len(self.tfidf.tfidf_scores[index]) < len(self.tfidf.tfidf_scores[index2]):
+            for key in self.tfidf.tfidf_scores[index2]:
+                if key in self.tfidf.tfidf_scores[index]:
+                    sum += self.tfidf.tfidf_scores[index].get(key)*self.tfidf.tfidf_scores[index2].get(key)
+        return sum
 
-    def matrix_multiplication(self):
-        self.tfidf.optimise()
-        # This is a M * M_transpose multiplication
-        result: list[dict[int, float]] =[]
-        # rows of matrix M
-        for i in range(len(self.tfidf.terms)):
-            # columns of matrix M_T (which will be rows of matrix M)
-            for j in range(len(self.tfidf.terms)):
-                # rows of matrix M_T
-                for k in range(self.tfidf.nr_documents):
-                    result[i][j] += self.tfidf(i,k) * self.tfidf(j,k)
-        return result
+
+

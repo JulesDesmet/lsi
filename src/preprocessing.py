@@ -105,8 +105,8 @@ if __name__ == "__main__":
 
     for index, data in enumerate(read_csv("data/news_dataset.csv")):
         text = split_text(data["content"])
-
-        #print(" ".join(lemmatize(text))[:200])
-        print(" ".join(remove_stopwords(lemmatize(text)))[:200])
+        print(text)
+        print(" ".join(lemmatize(text))[:200])
+        print(type(" ".join(remove_stopwords(lemmatize(text)))[:200]))
         if index == 10:
             break
