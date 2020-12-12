@@ -209,12 +209,12 @@ if __name__ == "__main__":
             manager = ManagerProcess(args.threads)
             manager.run(args.filename)
 
-#        decomposition = SVD(manager.tfidf)
-#        decomposition.matrix_multiplication()
+#
 
     except KeyboardInterrupt:
         pass
-
+    decomposition = SVD(manager.tfidf)
+    decomposition.matrix_multiplication()
     end = time()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")

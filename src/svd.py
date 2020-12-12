@@ -42,13 +42,11 @@ class SVD:
         # This is a M * M_transpose multiplication
         result: list[dict[int, float]] =[]
         # rows of matrix M
-        print(self.tfidf(0,10))
         for i in range(self.tfidf.nr_documents):
-            print(i)
             temp: dict = {}
             # columns of matrix M_T (which will be rows of matrix M)
             for j in range(self.tfidf.nr_documents):
-                sum = self.efficient_dot(i,j)
+                sum = self.efficient_dot(j,i)
 
                 # rows of matrix M_T
                 """                for k in range(self.tfidf.nr_documents):
@@ -62,8 +60,8 @@ class SVD:
 
     def efficient_dot(self, index: int, index2: int):
         sum = 0
-        print(len(self.tfidf.tfidf_scores[index]))
-        if len(self.tfidf.tfidf_scores[index]) > len(self.tfidf.tfidf_scores[index2]):
+        #print(len(self.tfidf.tfidf_scores[index]))
+        if len(self.tfidf.tfidf_scores[index]) >= len(self.tfidf.tfidf_scores[index2]):
             for key in self.tfidf.tfidf_scores[index]:
                 if key in self.tfidf.tfidf_scores[index2]:
                     sum += self.tfidf.tfidf_scores[index].get(key)*self.tfidf.tfidf_scores[index2].get(key)
