@@ -216,8 +216,10 @@ if __name__ == "__main__":
     decomposition = SVD(manager.tfidf)
     a = decomposition.create_numpy_matrices()
     a_t = a.transpose()
+    a_sparse = decomposition.turn_sparse(a)
+    a_t_sparse = decomposition.turn_sparse(a_t)
     start = time()
-    decomposition.matrix_multiplication_numpy(a_t, a)
+    decomposition.matrix_sparse_multiplication(a_t_sparse, a_sparse)
     end = time()
     t = end - start
     start2 = time()

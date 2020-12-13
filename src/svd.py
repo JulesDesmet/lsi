@@ -3,6 +3,7 @@
 from term_doc_matrix import TfIdf
 from math import sqrt
 import numpy as np
+from scipy import sparse
 from threading import Thread
 
 import threading
@@ -20,6 +21,8 @@ class SVD:
             for j in range(self.tfidf.nr_documents):
                 a[i,j] = self.tfidf(j,i)
         return a
+    def turn_sparse(self, matrix):
+        return sparse.csr_matrix(matrix)
 
     def calculate_eigen_values(self):
         print(self.tfidf(1,10))
@@ -90,6 +93,8 @@ class SVD:
         return output
         #print(np.matmul(matrixA, matrixB))
 
+    def matrix_sparse_multiplication(self, matrixA, matrixB):
+        print(sparse.csr_matrix.dot(matrixA, matrixB))
 
 
 
