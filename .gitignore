@@ -134,3 +134,5 @@ nltk/*/
 
 # Vim swp files
 *.swp
+
+.idea
