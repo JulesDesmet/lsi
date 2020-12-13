@@ -2,6 +2,7 @@
 
 from term_doc_matrix import TfIdf
 from math import sqrt
+import numpy as np
 from threading import Thread
 
 import threading
@@ -12,6 +13,13 @@ class SVD:
         self.document_matrix: list[dict] = []
         self.singular_values: list[dict] = []
         self.tfidf = tfidf_matrix
+
+    def create_numpy_matrices(self):
+        a = np.zeros(shape=(len(self.tfidf.terms),self.tfidf.nr_documents))
+        for i in range(len(self.tfidf.terms)):
+            for j in range(self.tfidf.nr_documents):
+                a[i,j] = self.tfidf(j,i)
+        return a
 
     def calculate_eigen_values(self):
         print(self.tfidf(1,10))
@@ -70,6 +78,20 @@ class SVD:
                 if key in self.tfidf.tfidf_scores[index]:
                     sum += self.tfidf.tfidf_scores[index].get(key)*self.tfidf.tfidf_scores[index2].get(key)
         return sum
+
+
+    def matrix_multiplication_numpy(self, matrixA, matrixB):
+        ra, ca = matrixA.shape
+        rb, cb = matrixB.shape
+        assert ca == rb, f"{ca} != {rb}"
+        output = np.zeros(shape=(ra,cb))
+        for i in range(ra):
+            output[i] = np.dot(matrixA[i],matrixB)
+        return output
+        #print(np.matmul(matrixA, matrixB))
+
+
+
 
 
 

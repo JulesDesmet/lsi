@@ -6,7 +6,7 @@ from multiprocessing import Process, Queue, set_start_method
 from queue import Empty
 from time import time
 from typing import Optional
-
+import numpy as np
 from preprocessing import read_csv, split_text, lemmatize, remove_stopwords
 from term_doc_matrix import TfIdf
 from svd import SVD
@@ -214,7 +214,15 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     decomposition = SVD(manager.tfidf)
-    decomposition.matrix_multiplication()
+    a = decomposition.create_numpy_matrices()
+    a_t = a.transpose()
+    start = time()
+    decomposition.matrix_multiplication_numpy(a_t, a)
     end = time()
     t = end - start
+    start2 = time()
+    decomposition.matrix_multiplication()
+    end2=time()
+    t2 = end2 - start2
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
+    debug(f"{int(t2) // 60} minutes {t2 % 60} seconds")
