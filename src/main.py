@@ -6,6 +6,7 @@ from multiprocessing import Process, Queue, set_start_method
 from queue import Empty
 from time import time
 from typing import Optional
+from scipy.sparse.linalg import eigs, eigsh
 import numpy as np
 from preprocessing import read_csv, split_text, lemmatize, remove_stopwords
 from term_doc_matrix import TfIdf
@@ -216,15 +217,16 @@ if __name__ == "__main__":
     decomposition = SVD(manager.tfidf)
     a = decomposition.create_numpy_matrices()
     a_t = a.transpose()
+
     a_sparse = decomposition.turn_sparse(a)
     a_t_sparse = decomposition.turn_sparse(a_t)
     start = time()
-    decomposition.matrix_sparse_multiplication(a_t_sparse, a_sparse)
+    MTM = decomposition.matrix_sparse_multiplication(a_t_sparse, a_sparse)
+    #decomposition.get_eigenvalues(MTM)
+    decomposition.new_idea(a)
     end = time()
     t = end - start
-    start2 = time()
-    decomposition.matrix_multiplication()
-    end2=time()
-    t2 = end2 - start2
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
-    debug(f"{int(t2) // 60} minutes {t2 % 60} seconds")
+    #evals_large, evecs_large = eigsh(MTM, 3, which="LM", tol=0.0001)
+    #print(evals_large)
+
