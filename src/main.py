@@ -216,17 +216,20 @@ if __name__ == "__main__":
         pass
     decomposition = SVD(manager.tfidf)
     a = decomposition.create_numpy_matrices()
-    a_t = a.transpose()
+    #a_t = a.transpose()
 
-    a_sparse = decomposition.turn_sparse(a)
-    a_t_sparse = decomposition.turn_sparse(a_t)
+    #a_sparse = decomposition.turn_sparse(a)
+    #a_t_sparse = decomposition.turn_sparse(a_t)
     start = time()
-    MTM = decomposition.matrix_sparse_multiplication(a_t_sparse, a_sparse)
+    #MTM = decomposition.matrix_sparse_multiplication(a_t_sparse, a_sparse)
     #decomposition.get_eigenvalues(MTM)
     decomposition.new_idea(a)
+    print(decomposition.eigenvalues)
+    #print(decomposition.eigenvectors)
     end = time()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
-    #evals_large, evecs_large = eigsh(MTM, 3, which="LM", tol=0.0001)
+
+    #evals_large, evecs_large = eigsh(a_t @ a, 3, which="LM", tol=0.0001)
     #print(evals_large)
 

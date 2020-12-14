@@ -99,13 +99,25 @@ class SVD:
         step = 1
         while cond:
             # Multiply M * x
+            x_guess = x
             x = self.sparse_array_multiplication(matrix, x)
-            lambda_new = max(abs(x))
             # Multiply MT * M * x
             x = matrix.transpose() @ x
-            # Get new x divided by eigenvalue
-            x = x/lambda_new
+            """
+            for i in eigenvalues
+                x - (lambda * eigenvec[i]) * (eigenvec[i].transpose*x_guess
+            """
+            for i in range(len(self.eigenvalues)):
+                prev_x_t = np.reshape(self.eigenvectors[i], (1, col))
+                prev_x = np.reshape(self.eigenvectors[i], (col, 1))
+                right1 = self.eigenvalues[i]*prev_x
+                right2 = prev_x_t@x_guess
+                x = x - right1@right2
 
+
+            lambda_new = np.linalg.norm(x)
+            # Get new x divided by eigenvalue
+            x = x/lambda_new # change to frobenius norm
             step = step + 1
             if step > max_iteration:
                 break
@@ -113,7 +125,11 @@ class SVD:
             lambda_old=lambda_new
             # Check if error is met, if so then we stop convergence
             cond = (error > tolerable_error)
-        return lambda_old, x
+
+        self.eigenvalues.append(lambda_old)
+        self.eigenvectors.append(x)
+        #print("CURRENT LENGTH {}".format(len(self.eigenvalues)))
+
 
 
     """Method to get all eigenvalues from the power iteration, still needs to be worked on"""
@@ -144,9 +160,30 @@ class SVD:
     """Test class to check new power iteration making use of associative method"""
     def new_idea(self, matrix):
         row, col = matrix.shape
-        transpose = matrix.transpose()
-        eigenval, MT = self.power_transformation_sparse(transpose, 0.0001)
+        matrix_t = matrix.transpose()
+        print("WE SHOULD RECEIVE AN EIGENVECTOR OF {} rows".format(col))
+        for i in range(row):
+            self.power_transformation_sparse(matrix_t, 0.0001)
 
-        print(eigenval)
-        print(MT)
+    """ 
+    def eigenval_MMT(self, matrix):
+        
+        row, col = matrix.shape
+        matrix_t = matrix.transpose()
+        for i in range(row):
+            self.power_transformation_sparse(matrix_t, 0.0001)
+            self.eigenvalues.append(eigval)
+            self.eigenvectors.append(eigvec)
+            
+            xt = np.reshape(eigvec, (1, row))
+            x = np.reshape(eigvec, (row, 1))
+            
+            xxt = x @ xt
+            print(xxt.shape)
+            print(matrix.shape)
+           # new_matrix = matrix - (xxt * (eigval / abs(x) ** 2))
+            next_iter = matrix - (eigval*xxt)
+            print(next_iter.shape)
+            break"""
+
 
