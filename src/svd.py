@@ -32,13 +32,11 @@ class SVD:
 
     @property
     def create_numpy_matrices(self):
-        #a = np.zeros(shape=(len(self.tfidf.terms),self.tfidf.nr_documents))
         a = sparse.lil_matrix((len(self.tfidf.terms), self.tfidf.nr_documents))
         """
         Generates numpy matrices from the TF-idf object
         :return: Returns the generated matrix
         """
-        a = np.zeros(shape=(len(self.tfidf.terms), self.tfidf.nr_documents))
         for i in range(len(self.tfidf.terms)):
             for j in self.tfidf.docs_per_term[i]:
                 a[i,j] = self.tfidf(j,i)
@@ -65,10 +63,10 @@ class SVD:
                 sum = self.efficient_dot(j,i)
 
                 # rows of matrix M_T
-                """                for k in range(self.tfidf.nr_documents):
+                              for k in range(self.tfidf.nr_documents):
                     print("I:"+str(i) +" K:" +str(k) + "J: " +str(j))
                     sum += self.tfidf(k,i) * self.tfidf(k,j)
-                    """
+                  
 
                 temp[j] = sum
             result.append(temp)
