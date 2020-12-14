@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from collections import Counter
 from math import log2
 from typing import Callable, Iterable, Union
 
@@ -94,7 +93,9 @@ class TfIdf:
         self.terms_per_doc.append(term_id_frequencies)
         for term_id in term_id_frequencies:
             if term_id >= len(self.docs_per_term):
-                self.docs_per_term.extend(set() for _ in range(term_id - len(self.docs_per_term)))
+                self.docs_per_term.extend(
+                    set() for _ in range(term_id - len(self.docs_per_term))
+                )
                 self.docs_per_term.append({document_id})
             else:
                 self.docs_per_term[term_id].add(document_id)
@@ -169,3 +170,50 @@ class TfIdf:
             if term_id not in self.terms_per_doc[document_id]:
                 return 0.0
             return self.call_pre_optimise(document_id, term_id)
+
+    def __matmul__(
+        self, vector: Iterable[float], term_major: bool = None
+    ) -> list[float]:
+        """
+        Multiplies the term-document-matrix, or its transpose, with a vector.
+
+        :param vector: A vector (i.e. an (n x 1)-matrix) whose dimension n matches one
+            of the sizes of the term-document-matrix, depending on the parameter
+            `term_major`. If `term_major` is True, then this vector should have the same
+            size as the matrix' number of documents. If it's `False`, then it should
+            match the matrix' number of terms. If it's not specified (or `None`), then
+            the size can be either.
+        :param term_major: Whether the vector is to be multiplied with the
+            term-document-matrix or its transpose. `True` means that the rows are
+            associated with a term each, whereas `False` means that the rows are
+            associated with documents. The columns are associated with documents or
+            terms respectively.
+            If this parameter isn't specified, then the length of the vector will
+            determine which matrix it's multiplied with. If the number of documents is
+            equal to the number of terms, then this parameter is simply assumed to be
+            `True`.
+        :return: The product of the matrix and the vector, as a list of `float`s.
+        """
+        # If neither term major nor document major was selected, determine based on
+        # vector length
+        if term_major is None:
+            term_major = len(vector) == len(self.terms)
+
+        if term_major:
+            assert len(vector) == self.nr_documents
+            return [
+                sum(
+                    self.tfidf_scores[document_id][term_id] * vector[document_id]
+                    for document_id in documents
+                )
+                for term_id, documents in enumerate(self.docs_per_term)
+            ]
+        else:
+            assert len(vector) == len(self.terms)
+            return [
+                sum(
+                    score * vector[term_id]
+                    for term_id, score in self.terms_per_doc[document_id].items()
+                )
+                for document_id in range(self.nr_documents)
+            ]
