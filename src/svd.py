@@ -3,40 +3,55 @@
 from term_doc_matrix import TfIdf
 from math import sqrt
 import numpy as np
-import string
 from scipy import sparse
-from threading import Thread
 
-import threading
+
 class SVD:
     tfidf: TfIdf
+
     def __init__(self, tfidf_matrix: "TfIdf" , k):
-        self.term_matrix: list[dict] = []
-        self.document_matrix: list[dict] = []
-        self.singular_values: list[dict] = []
+        """
+        Initialize the class SVD
+        :param tfidf_matrix: the TF-IDF matrix with tf idf score values
+        :param k: K is the rank we want to reduce our dimensionality too
+        """
         self.tfidf = tfidf_matrix
+        # Stores the eigen values for M*MT
         self.eigenvaluesMMT = []
+        # Stores the eigen values for MT * M
         self.eigenvaluesMTM = []
+        # Stores the eigenvectors of M*MT which equals the matrix U in the SVD decomposition
         self.eigenvectorsU = []
+        #  Stores the eigenvectors of MT*M which equals the matrix V in the SVD decomposition
         self.eigenvectorsV = []
+        # Used to store the numpy matrix version of U and V, used for querying
+        self.u = np.zeros(shape=(len(self.tfidf.terms),k))
+        # holds v transpose not v
+        self.v = np.zeros(shape=(k, self.tfidf.nr_documents))
         self.k: int = k
-    """
-    Function that turns the tfidf object into a numpy matrix
-    """
+        
+    @property
     def create_numpy_matrices(self):
-        a = np.zeros(shape=(len(self.tfidf.terms),self.tfidf.nr_documents))
+        """
+        Generates numpy matrices from the TF-idf object
+        :return: Returns the generated matrix
+        """
+        a = np.zeros(shape=(len(self.tfidf.terms), self.tfidf.nr_documents))
         for i in range(len(self.tfidf.terms)):
             for j in range(self.tfidf.nr_documents):
-                a[i,j] = self.tfidf(j,i)
+                a[i, j] = self.tfidf(j, i)
         return a
 
-    """
-    Turns matrix in sparse matrix
-    """
     def turn_sparse(self, matrix):
+        """
+        function to turn dense matrices into sparse matrices
+        :param matrix: Takes a numpy array(matrix)
+        :return: Sparse matrix
+        """
         return sparse.csr_matrix(matrix)
 
-    """Matrix multiplication with no numpy libraries"""
+    """
+    # This function was an attempt at an efficient way to do matrix multiplication without libraries
     def matrix_multiplication(self):
         # This is a M * M_transpose multiplication
         result: list[dict[int, float]] =[]
@@ -46,19 +61,13 @@ class SVD:
             # columns of matrix M_T (which will be rows of matrix M)
             for j in range(self.tfidf.nr_documents):
                 sum = self.efficient_dot(j,i)
-
-                # rows of matrix M_T
-                """                for k in range(self.tfidf.nr_documents):
-                    print("I:"+str(i) +" K:" +str(k) + "J: " +str(j))
-                    sum += self.tfidf(k,i) * self.tfidf(k,j)
-                    """
-
                 temp[j] = sum
             result.append(temp)
         print(result)
+    """
 
-
-    """Dot multiplication with no numpy libraries and with skipping 0 values"""
+    """
+    # Attempt at a dot multiplication used in matrix multiplication without numpy libraries and by skipping 0 values.
     def efficient_dot(self, index: int, index2: int):
         sum = 0
         #print(len(self.tfidf.tfidf_scores[index]))
@@ -71,7 +80,7 @@ class SVD:
                 if key in self.tfidf.tfidf_scores[index]:
                     sum += self.tfidf.tfidf_scores[index].get(key)*self.tfidf.tfidf_scores[index2].get(key)
         return sum
-
+    """
 
     """Matrix multiplication in numpy, should not be used"""
     def matrix_multiplication_numpy(self, matrixA, matrixB):
@@ -82,11 +91,15 @@ class SVD:
         for i in range(ra):
             output[i] = np.dot(matrixA[i],matrixB)
         return output
-        #print(np.matmul(matrixA, matrixB))
-
 
     """Multiplication of two sparse matrices"""
     def matrix_sparse_multiplication(self, matrixA, matrixB):
+        """
+        Takes two sparse matrices and multiplies them using the scipy sparse matrix dot multiplication
+        :param matrixA: sparse matrix
+        :param matrixB: sparse matrix
+        :return: sparse matrix
+        """
         return sparse.csr_matrix.dot(matrixA, matrixB)
 
     """Power transformation of sparse matrix"""
@@ -100,7 +113,6 @@ class SVD:
         """
         row, col = matrix.shape
         # Initial guess vector, fill it (col, 1)
-
         x = np.ones(col)
         # When max iteration is reached convergence ends, value can be adjusted
         max_iteration = 50
@@ -110,6 +122,7 @@ class SVD:
         step = 1
         eigenvalues = []
         eigenvectors = []
+        # Depending on it being a M * MT or MT * M multiplication we fill in different arrays
         if version == "MTM":
             eigenvalues = self.eigenvaluesMTM
             eigenvectors = self.eigenvectorsV
@@ -117,16 +130,12 @@ class SVD:
             eigenvalues = self.eigenvaluesMMT
             eigenvectors = self.eigenvectorsU
         while cond:
-            # Multiply M * x
             x_guess = x
+            # Multiply M * x
             x = self.sparse_array_multiplication(matrix, x)
             # Multiply MT * M * x
-            #x = matrix.transpose() @ x
             x = sparse.csr_matrix.dot(matrix.transpose(), x)
-            """
-            for i in eigenvalues
-                x - (lambda * eigenvec[i]) * (eigenvec[i].transpose*x_guess
-            """
+            # Iterate over all eigenvalues and subtract lambda*x*xt from the original matrix for each eigenvalue
             for i in range(len(eigenvalues)):
                 prev_x_t = np.reshape(eigenvectors[i], (1, col))
                 prev_x = np.reshape(eigenvectors[i], (col, 1))
@@ -145,15 +154,18 @@ class SVD:
             cond = (error > tolerable_error)
         if version == "MTM":
             self.eigenvectorsV.append(x)
-            self.eigenvaluesMTM.append(lambda_old)
+            self.eigenvaluesMTM = np.append(self.eigenvaluesMTM,lambda_old)
         elif version == "MMT":
             self.eigenvectorsU.append(x)
-            self.eigenvaluesMMT.append(lambda_old)
+            self.eigenvaluesMMT= np.append(self.eigenvaluesMMT, lambda_old)
 
-
-
-    """Matrix * vector using Python3.5+ matrix multiplication"""
     def sparse_array_multiplication(self, sparse, guess):
+        """
+        Matrix * vector multiplication using Python3.5 matrix multiplication @
+        :param sparse: sparse matrix
+        :param guess: a vector
+        :return:
+        """
         return sparse @ guess
 
 
@@ -162,19 +174,65 @@ class SVD:
         """
 
         :param matrix: the starting matrix of which we calculate the eigenvalues
-        :param k: the amount of singular values we want
-        :return:
+        :param k: the amount of singular values we want, the rank
+        :return: Fills in the eigenvectors and eigenvalues
         """
-        row, col = matrix.shape
         matrix_t = matrix.transpose()
-        print("WE SHOULD RECEIVE AN EIGENVECTOR OF {} rows".format(row))
         for i in range(self.k):
             self.power_transformation_sparse(matrix, 0.0001, "MTM")
             self.power_transformation_sparse(matrix_t, 0.0001, "MMT")
 
     def calculate_sigma(self):
+        """
+        Eigenvalues computed in calculate_eigenvalues need to be square rooted to get sigma for our SVD, we also
+        immediately put this in a diagonal matrix for query purposes
+        :return:
+        """
         for i in range(len(self.eigenvaluesMTM)):
             self.eigenvaluesMTM[i] = sqrt(self.eigenvaluesMTM[i])
-                
+        self.eigenvaluesMTM = np.diag(self.eigenvaluesMTM)
+
+    def convert_uv_numpy(self):
+        """
+        Converting the eigenvector arrays to numpy arrays for query purposes
+        :return:
+        """
+        u = np.zeros(shape=(len(self.eigenvectorsU[0]),len(self.eigenvectorsU)))
+        v = np.zeros(shape=(len(self.eigenvectorsV), len(self.eigenvectorsV[0])))
+        for i in range(len(self.eigenvectorsU[0])):
+            for j in range(len(self.eigenvectorsU)):
+                u[i,j] = self.eigenvectorsU[j][i]
+        for i in range(len(self.eigenvectorsV)):
+            for j in range(len(self.eigenvectorsV[0])):
+                v[i,j] = self.eigenvectorsV[i][j]
+        self.u = u
+        self.v = v
+
+    def return_query(self, query):
+        """
+        Gives the result for a query multiplied by the matrix, we use the components of the SVD decomposition to do this more efficiently
+        :param query:
+        :return: result of M*query
+        """
+        # Calculate V_T * x (our query)
+        first = self.v @ query
+        # Calculate U * SIGMA
+        second = self.u @ self.eigenvaluesMTM
+        # Computes M * x
+        result = first @ second
+        return result
+
+    def return_query_document(self, query):
+        """
+        Maps representation of query in document space
+        :param query:
+        :return:
+        """
+        # Returns the representation of the query in document space
+        v_trans = self.v.transpose()
+        result = query @ self.v
+        result = result @ v_trans
+        return result
+
 
 
