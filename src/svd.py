@@ -24,9 +24,10 @@ class SVD:
     Function that turns the tfidf object into a numpy matrix
     """
     def create_numpy_matrices(self):
-        a = np.zeros(shape=(len(self.tfidf.terms),self.tfidf.nr_documents))
+        #a = np.zeros(shape=(len(self.tfidf.terms),self.tfidf.nr_documents))
+        a = sparse.lil_matrix((len(self.tfidf.terms), self.tfidf.nr_documents))
         for i in range(len(self.tfidf.terms)):
-            for j in range(self.tfidf.nr_documents):
+            for j in self.tfidf.docs_per_term[i]:
                 a[i,j] = self.tfidf(j,i)
         return a
 
@@ -160,17 +161,16 @@ class SVD:
     """Test class to check new power iteration making use of associative method"""
     def calculate_eigenvalues(self, matrix):
         """
-
         :param matrix: the starting matrix of which we calculate the eigenvalues
         :param k: the amount of singular values we want
         :return:
         """
         row, col = matrix.shape
         matrix_t = matrix.transpose()
-        print("WE SHOULD RECEIVE AN EIGENVECTOR OF {} rows".format(row))
         for i in range(self.k):
             self.power_transformation_sparse(matrix, 0.0001, "MTM")
             self.power_transformation_sparse(matrix_t, 0.0001, "MMT")
+            print(f"{i:3} {self.eigenvalues[-1]} {self.eigenvectors[-1]}"
 
     def calculate_sigma(self):
         for i in range(len(self.eigenvaluesMTM)):
