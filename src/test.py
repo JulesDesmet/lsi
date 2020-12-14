@@ -209,8 +209,11 @@ class TfIdfTestCase(BaseTestCase):
 
         tfidf_scores = self.get_tfidf_scores(self.tfidf)
         self.tfidf.optimise()
-
         self.assertEqual(self.get_tfidf_scores(self.tfidf), tfidf_scores)
+
+        for term_id, documents in enumerate(self.tfidf.docs_per_term):
+            for document_id in documents:
+                self.assertIn(term_id, self.tfidf.tfidf_scores[document_id])
 
 
 class MultiProcessTestCase(BaseTestCase):

@@ -116,13 +116,20 @@ class TfIdf:
         """
         self.tfidf_scores = [None for _ in range(self.nr_documents)]
 
+        for term_id in range(len(self.docs_per_term) - 1, -1, -1):
+            documents = self.docs_per_term[term_id]
+
+            if len(documents) == self.nr_documents:
+                for document_id in documents:
+                    del self.terms_per_doc[document_id][term_id]
+                self.docs_per_term[term_id] = set()
+
         # Compute the TF.IDF scores for each document ID and term ID
         # Additionally, sort the terms for each document
         for document_id in range(self.nr_documents - 1, -1, -1):
             self.tfidf_scores[document_id] = {
                 term: freq * log2(self.nr_documents / len(self.docs_per_term[term]))
                 for term, freq in sorted(self.terms_per_doc[-1].items())
-                if self.nr_documents != len(self.docs_per_term[term])
             }
             del self.terms_per_doc[-1]
 
@@ -219,7 +226,7 @@ class TfIdf:
             return [
                 sum(
                     score * vector[term_id]
-                    for term_id, score in self.terms_per_doc[document_id].items()
+                    for term_id, score in self.tfidf_scores[document_id].items()
                 )
                 for document_id in range(self.nr_documents)
             ]
