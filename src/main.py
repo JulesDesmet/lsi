@@ -148,6 +148,8 @@ class ManagerProcess(BaseProcess):
             # Distribute the documents by simply putting them in a queue
             debug("Process 0 has started.")
             for index, data in enumerate(read_csv(filename)):
+                if index == 100:
+                    break
 
                 if self.document_queue.qsize() < 3 * nr_procs:
                     self.document_queue.put(self.get_data(data))

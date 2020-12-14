@@ -147,8 +147,7 @@ class TfIdfTestCase(BaseTestCase):
                 self.assertEqual(mapping, expected)
 
         self.assertEqual(
-            self.convert_mapping(self.tfidf, self.tfidf.docs_per_term),
-            Counter(a=3, b=2, c=2, d=2, e=1),
+            self.tfidf.docs_per_term, [{0, 1, 3}, {0, 3}, {0, 3}, {0, 3}, {3}]
         )
 
     def test_call(self) -> None:
@@ -182,8 +181,7 @@ class TfIdfTestCase(BaseTestCase):
             [{term: tf for term, tf in doc.items() if tf != 0} for doc in tf_scores],
         )
         self.assertEqual(
-            self.convert_mapping(self.tfidf, self.tfidf.docs_per_term),
-            Counter(a=3, b=2, c=3, d=4),
+            self.tfidf.docs_per_term, [{0, 2, 3}, {0, 1}, {0, 2, 3}, {0, 1, 2, 3}]
         )
 
         # Iterate over each document and term
@@ -211,10 +209,11 @@ class TfIdfTestCase(BaseTestCase):
 
         tfidf_scores = self.get_tfidf_scores(self.tfidf)
         self.tfidf.optimise()
-
         self.assertEqual(self.get_tfidf_scores(self.tfidf), tfidf_scores)
-        self.assertEqual(self.tfidf.terms_per_doc, [])
-        self.assertEqual(self.tfidf.docs_per_term, Counter())
+
+        for term_id, documents in enumerate(self.tfidf.docs_per_term):
+            for document_id in documents:
+                self.assertIn(term_id, self.tfidf.tfidf_scores[document_id])
 
 
 class MultiProcessTestCase(BaseTestCase):
