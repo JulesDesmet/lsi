@@ -102,7 +102,8 @@ class SVD:
             x_guess = x
             x = self.sparse_array_multiplication(matrix, x)
             # Multiply MT * M * x
-            x = matrix.transpose() @ x
+            #x = matrix.transpose() @ x
+            x = sparse.csr_matrix.dot(matrix.transpose(), x)
             """
             for i in eigenvalues
                 x - (lambda * eigenvec[i]) * (eigenvec[i].transpose*x_guess
@@ -161,7 +162,7 @@ class SVD:
     def new_idea(self, matrix):
         row, col = matrix.shape
         matrix_t = matrix.transpose()
-        print("WE SHOULD RECEIVE AN EIGENVECTOR OF {} rows".format(col))
+        print("WE SHOULD RECEIVE AN EIGENVECTOR OF {} rows".format(row))
         for i in range(row):
             self.power_transformation_sparse(matrix_t, 0.0001)
 
