@@ -214,7 +214,7 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         pass
-    decomposition = SVD(manager.tfidf)
+    decomposition = SVD(manager.tfidf, 50)
     startconvert = time()
     a = decomposition.create_numpy_matrices()
     #a_t = a.transpose()
@@ -225,13 +225,12 @@ if __name__ == "__main__":
     start = time()
     #MTM = decomposition.matrix_sparse_multiplication(a_sparse, a_t_sparse)
     #decomposition.get_eigenvalues(MTM)
-    decomposition.new_idea(a_sparse)
-    print(decomposition.eigenvalues)
-    #print(decomposition.eigenvectors)
+    decomposition.calculate_eigenvalues(a_sparse)
+    print(decomposition.eigenvaluesMTM)
+    print(decomposition.eigenvaluesMMT)
     end = time()
     t = end - start
     debug(f"{int(t) // 60} minutes {t % 60} seconds")
-    t = endconvert-startconvert
     debug(f"Conversion time is {int(t) // 60} minutes {t % 60} seconds")
     #evals_large, evecs_large = eigsh(a_t @ a, 3, which="LM", tol=0.0001)
     #print(evals_large)
