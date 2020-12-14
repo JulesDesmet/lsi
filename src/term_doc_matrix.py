@@ -232,5 +232,14 @@ class TfIdf:
             ]
 
     def __matmul__(self, vector: Iterable[float]) -> list[float]:
-        """"""
+        """
+        Computes the product of the matrix and a vector. Depending on the size of the
+        vector, either the [document_id, term_id] matrix is multiplied, or the [term_id,
+        document_id] matrix.
+
+        :param vector: The vector as an iterable of floating point numbers. Its size
+            should either be equal to the number of documents, or the number of terms in
+            the matrix.
+        :return: The result of the multiplication as a list of floats.
+        """
         return self.multiply_vector(vector)

@@ -199,30 +199,30 @@ if __name__ == "__main__":
     getLogger().setLevel(DEBUG)
     args = parse_arguments()
 
-    start = time()
-
     try:
         args = parse_arguments()
         if args.threads == 1:
             process = BaseProcess()
             process.run(args.filename)
+            decomposition = SVD(process.tfidf, 100)
         else:
             manager = ManagerProcess(args.threads)
             manager.run(args.filename)
+            decomposition = SVD(manager.tfidf, 100)
 
-#
+        startconvert = time()
+        a = decomposition.create_numpy_matrices()
+        a_sparse = decomposition.turn_sparse(a)
+        endconvert = time()
 
+        start = time()
+        decomposition.calculate_eigenvalues(a_sparse)
+        print(decomposition.eigenvaluesMTM)
+        print(decomposition.eigenvaluesMMT)
+        end = time()
+
+        t = end - start
+        debug(f"{int(t) // 60} minutes {t % 60} seconds")
+        debug(f"Conversion time is {int(t) // 60} minutes {t % 60} seconds")
     except KeyboardInterrupt:
         pass
-    decomposition = SVD(manager.tfidf, 50)
-    startconvert = time()
-    a = decomposition.create_numpy_matrices
-    a_sparse = decomposition.turn_sparse(a)
-    endconvert = time()
-    start = time()
-    decomposition.calculate_eigenvalues(a_sparse)
-    decomposition.calculate_sigma()
-    end = time()
-    t = end - start
-    debug(f"{int(t) // 60} minutes {t % 60} seconds")
-

@@ -93,7 +93,7 @@ def remove_stopwords(text: Iterable[str]) -> Generator[str, None, None]:
     :return: A generator that yields all the words that are not stop words. These can be concatenated into a string
         by using the " ".join(...) function.
     """
-    stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words("english"))
     return (
         word
         for word in text
@@ -106,7 +106,6 @@ if __name__ == "__main__":
     for index, data in enumerate(read_csv("data/news_dataset.csv")):
         text = split_text(data["content"])
         print(text)
-        print(" ".join(lemmatize(text))[:200])
-        print(type(" ".join(remove_stopwords(lemmatize(text)))[:200]))
+        print(" ".join(remove_stopwords(lemmatize(text)))[:200])
         if index == 10:
             break
