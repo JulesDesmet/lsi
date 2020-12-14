@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from collections import Counter
 from math import log2
 from typing import Callable, Iterable, Union
 
@@ -32,6 +33,11 @@ class TfIdf:
         if self.tfidf_scores or tfidf.tfidf_scores:
             raise Exception("Optimised TfIdf objects can't be merged...")
 
+        docs_per_term = [
+            {doc_id + self.nr_documents for doc_id in documents}
+            for documents in tfidf.docs_per_term
+        ]
+
         # Create a translation dictionary, which maps the other TfIdf object's term IDs
         # to this object's term IDs; also insert missing terms in this object
         translation = {}
@@ -39,9 +45,9 @@ class TfIdf:
             if term not in self.term_ids:
                 self.term_ids[term] = len(self.terms)
                 self.terms.append(term)
-                self.docs_per_term.append(tfidf.docs_per_term[term_id])
+                self.docs_per_term.append(docs_per_term[term_id])
             else:
-                self.docs_per_term[term_id] |= self.docs_per_term[term_id]
+                self.docs_per_term[self.term_ids[term]] |= docs_per_term[term_id]
             translation[term_id] = self.term_ids[term]
 
         for document_freqs in tfidf.terms_per_doc:
@@ -171,7 +177,7 @@ class TfIdf:
                 return 0.0
             return self.call_pre_optimise(document_id, term_id)
 
-    def __matmul__(
+    def multiply_vector(
         self, vector: Iterable[float], term_major: bool = None
     ) -> list[float]:
         """
@@ -197,7 +203,7 @@ class TfIdf:
         # If neither term major nor document major was selected, determine based on
         # vector length
         if term_major is None:
-            term_major = len(vector) == len(self.terms)
+            term_major = len(vector) == self.nr_documents
 
         if term_major:
             assert len(vector) == self.nr_documents
@@ -217,3 +223,7 @@ class TfIdf:
                 )
                 for document_id in range(self.nr_documents)
             ]
+
+    def __matmul__(self, vector: Iterable[float]) -> list[float]:
+        """"""
+        return self.multiply_vector(vector)
